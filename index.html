@@ -112,6 +112,21 @@ body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI'
 .wpp-alt{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:10px;padding:14px;border-radius:14px;border:2px solid #25D366;background:transparent;color:#25D366;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit;transition:background .18s}
 .wpp-alt:hover{background:rgba(37,211,102,.12)}
 
+/* Card mockup WhatsApp — prova visual do lead que a 1Nort entrega */
+.wpp-card{background:#e7f5ec;border-radius:14px;padding:0;margin:6px 0 18px;box-shadow:0 8px 28px rgba(0,0,0,.35);overflow:hidden;color:#111}
+.wpp-card-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#075e54;color:#fff;font-size:13px}
+.wpp-card-avatar{width:34px;height:34px;border-radius:50%;background:#25D366;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wpp-card-name{font-weight:700;font-size:14px;line-height:1.2}
+.wpp-card-time{font-size:11px;opacity:.75;margin-top:1px}
+.wpp-card-body{padding:14px 14px 16px;background:#dcf8c6;position:relative}
+.wpp-card-body::before{content:'';position:absolute;top:0;left:-6px;width:0;height:0;border-top:8px solid #dcf8c6;border-left:6px solid transparent}
+.wpp-card-msg{font-size:13.5px;line-height:1.55;color:#111;white-space:pre-line;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.wpp-card-msg b{font-weight:700;color:#075e54}
+.wpp-card-foot{text-align:right;font-size:10px;color:#666;margin-top:6px}
+.reframe-lead{font-size:14.5px;color:var(--txt-dim);line-height:1.55;margin:2px 0 14px;font-weight:600}
+.reframe-lead b{color:#fff;font-weight:700}
+.reframe-price{background:rgba(253,216,53,.10);border-left:3px solid var(--yellow);padding:12px 14px;border-radius:8px;font-size:14.5px;color:#fff;line-height:1.55;margin:0 0 18px;font-weight:600}
+
 /* modal de retenção */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:22px}
 .modal-bg.show{display:flex}
@@ -264,22 +279,60 @@ const CONFIG = {
         { key:"telefone", label:"WhatsApp", type:"tel",  placeholder:"(11) 99999-9999",      autocomplete:"tel", prefix:"+55"  }
       ], trust:true, next:"desafio" },
 
-    /* Única pergunta de afinidade — dá insumo pro comercial sem esticar o quiz */
+    /* Engajamento antes das perguntas de qualificação (afinidade + insumo pro comercial) */
     { id:"desafio", type:"single", image:"imagens/desafio.jpg", title:"Qual o maior desafio do escritório hoje, {nome}?",
       options:[
-        {ic:"📭",t:"Faltam clientes novos",              s:0, next:"contratos"},
-        {ic:"🎯",t:"Tenho leads, mas não convertem",     s:0, next:"contratos"},
-        {ic:"⏰",t:"Não tenho tempo pra atender",         s:0, next:"contratos"},
-        {ic:"📈",t:"Já tenho clientes, quero escalar",    s:0, next:"contratos"}
+        {ic:"📭",t:"Faltam clientes novos",              s:0, next:"advogados"},
+        {ic:"🎯",t:"Tenho leads, mas não convertem",     s:0, next:"advogados"},
+        {ic:"⏰",t:"Não tenho tempo pra atender",         s:0, next:"advogados"},
+        {ic:"📈",t:"Já tenho clientes, quero escalar",    s:0, next:"advogados"}
       ] },
-
-    /* Última pergunta (submit) — volume de fechamento pra sinalizar TOP/padrão sem kill */
-    { id:"contratos", type:"single", submit:true, image:"imagens/contratos.jpg", title:"Quantos contratos novos o escritório fecha por mês, em média?",
+    { id:"advogados", type:"single", title:"Quantos advogados atuam no escritório? (incluindo sócios)",
       options:[
-        {ic:"🔧",t:"1 ou menos",     s:0},
-        {ic:"⚡",t:"2 a 5",           s:1},
-        {ic:"📈",t:"6 a 15",          s:2},
-        {ic:"🚀",t:"Mais de 15",      s:3}
+        {ic:"🧑‍⚖️",t:"Sou só eu / autônomo",     s:0, next:"contratos"},
+        {ic:"👥",t:"2 advogados",              s:0, next:"contratos"},
+        {ic:"⚖️",t:"3 a 5 advogados",           s:2, next:"contratos"},
+        {ic:"🏛️",t:"6 ou mais advogados",       s:3, next:"contratos"}
+      ] },
+    { id:"contratos", type:"single", image:"imagens/contratos.jpg", title:"Quantos contratos novos o escritório fecha por mês, em média?",
+      options:[
+        {ic:"🔧",t:"1 ou menos",     s:0, next:"investimento"},
+        {ic:"⚡",t:"2 a 5",           s:1, next:"investimento"},
+        {ic:"📈",t:"6 a 15",          s:2, next:"investimento"},
+        {ic:"🚀",t:"Mais de 15",      s:3, next:"investimento"}
+      ] },
+    /* PERGUNTA DE INVESTIMENTO — bifurca: quem quer menos vai pro reframe, resto submete direto */
+    { id:"investimento", type:"single", image:"imagens/time.jpg",
+      title:"Nossos clientes fecham <b>5 a 15 novos contratos por mês</b> investindo cerca de <b>R$ 40/dia</b> em anúncios (~R$ 1.200/mês).",
+      sub:"Esse é um ponto de partida que combina com seu escritório?",
+      options:[
+        {ic:"🌱",t:"Quero começar com menos",             s:1, next:"orcamento_reframe"},
+        {ic:"✅",t:"É um ponto de partida ideal",         s:2, submit:true},
+        {ic:"🚀",t:"Quero começar investindo mais!",      s:3, submit:true}
+      ] },
+    /* TELA DE REFRAME — prova visual (card WhatsApp) + pergunta corte de budget */
+    { id:"orcamento_reframe", type:"reframe",
+      title:"{nome}, é ISSO que a gente entrega no seu WhatsApp 👇",
+      wppCard:{
+        avatar:"PA",
+        name:"Paulo Alvin",
+        time:"Hoje, 11:00",
+        msg:"Olá Dra. Melissa! Respondi o questionário do site e gostaria de atendimento.\n\n<b>Situação:</b> Demitido(a) recentemente ou vai sair em breve\n<b>Contrato:</b> CLT\n<b>Tempo na empresa:</b> 1 a 3 anos\n<b>Tempo desde saída:</b> Menos de 30 dias\n<b>O que aconteceu:</b> Insalubridade, Assédio moral ou sexual\n<b>Faixa salarial:</b> R$ 1.500 a R$ 3.000\n\n<b>Produto:</b> trabalhista\n<b>Tese:</b> insalubridade, assedio_moral\n<b>Origem:</b> meta"
+      },
+      lead:"Cada lead chega no seu WhatsApp já pré-qualificado. Sem \"quanto custa?\", sem curioso, sem pergunta solta.",
+      price:"Pra receber lead assim todo dia, o investimento em mídia começa em <b>R$ 1.200/mês</b>. Menos que isso a matemática não fecha.",
+      sub:"Com essa perspectiva, quanto faz sentido investir por mês na mídia?",
+      options:[
+        {ic:"🟢",t:"Consigo os R$ 1.200/mês",       s:2, submit:true},
+        {ic:"🟡",t:"Entre R$ 800 e R$ 1.200",       s:1, submit:true},
+        {ic:"🔴",t:"Menos que R$ 800 hoje",         s:0, next:"nurture", kill:true}
+      ] },
+    /* NURTURE — descarte suave: sem WhatsApp, sem promessa de contato do comercial */
+    { id:"nurture", type:"single", submit:true,
+      title:"Valeu pela honestidade, {nome} 🙌",
+      sub:"Com menos de R$ 800/mês em mídia, a parceria com a 1Nort ainda não vai performar — o algoritmo não tem volume pra aprender e a gente prefere te falar isso antes de vender.<br><br>Quando o momento chegar, chama a gente por aqui mesmo.",
+      options:[
+        {ic:"👍",t:"Entendi, obrigado!", s:0, kill:true}
       ] }
   ]
 };
@@ -437,11 +490,25 @@ const CONFIG = {
       const cb=document.getElementById('contactsBtn'); if(cb) cb.onclick=pickContacts;
       enhance(submit);
     }
-    else if(step.type==='single'){
+    else if(step.type==='single' || step.type==='reframe'){
+      const wpp = step.wppCard;
+      const wppHtml = wpp ? `<div class="wpp-card">
+        <div class="wpp-card-head">
+          <div class="wpp-card-avatar">${wpp.avatar||'??'}</div>
+          <div><div class="wpp-card-name">${wpp.name||''}</div><div class="wpp-card-time">${wpp.time||''}</div></div>
+        </div>
+        <div class="wpp-card-body"><div class="wpp-card-msg">${wpp.msg||''}</div><div class="wpp-card-foot">${wpp.time||''} ✓✓</div></div>
+      </div>` : '';
+      const leadHtml  = step.lead  ? `<div class="reframe-lead">${px(step.lead)}</div>`   : '';
+      const priceHtml = step.price ? `<div class="reframe-price">${px(step.price)}</div>` : '';
+      const hasReframeBlocks = !!(wppHtml || leadHtml || priceHtml);
+      const subEarly = (!hasReframeBlocks && step.sub) ? `<div class="q-sub">${px(step.sub)}</div>` : '';
+      const subLate  = ( hasReframeBlocks && step.sub) ? `<div class="q-sub">${px(step.sub)}</div>` : '';
       host.innerHTML = `<div class="screen active">
         ${step.image?`<img class="q-hero" src="${step.image}" alt="" loading="lazy" decoding="async">`:''}
         <div class="q-step">Etapa ${stepHistory.length+1}</div>
-        <div class="q-title">${px(step.title)}</div>${step.sub?`<div class="q-sub">${px(step.sub)}</div>`:''}
+        <div class="q-title">${px(step.title)}</div>${subEarly}
+        ${wppHtml}${leadHtml}${priceHtml}${subLate}
         <div class="opts">${step.options.map((o,i)=>`<button class="opt" data-i="${i}">${o.ic?`<span class="opt-ic">${o.ic}</span>`:''}<span>${o.t}</span><span class="opt-dot"></span></button>`).join('')}</div>
         ${stepHistory.length?'<button class="back" id="backBtn">← Voltar</button>':''}</div>`;
       updateProgress();
@@ -452,8 +519,9 @@ const CONFIG = {
           lead.respostas[step.id]=opt.t;
           lead.pts[step.id]=opt.s||0;
           lead.kills[step.id]=opt.kill===true;   // corte (faturamento até 20k / investimento <1.200)
+          const isSubmit = step.submit || opt.submit===true;
           setTimeout(()=>{
-            if(step.submit){ maybeShowSocialProof(); }                  // passo final → prova social (qualificado) ou finish
+            if(isSubmit){ maybeShowSocialProof(); }                     // passo final → prova social (qualificado) ou finish
             else { stepHistory.push(currentId); render(opt.next); }
           },240);
         };
@@ -600,8 +668,10 @@ const CONFIG = {
     const r = lead.respostas || {};
     const linhas = [ px(CONFIG.whatsapp.msg||'') ];
     const diag = [];
-    if(r.desafio)   diag.push('• Maior desafio: '            + r.desafio);
-    if(r.contratos) diag.push('• Contratos novos por mês: '  + r.contratos);
+    if(r.desafio)      diag.push('• Maior desafio: '            + r.desafio);
+    if(r.advogados)    diag.push('• Advogados no escritório: '  + r.advogados);
+    if(r.contratos)    diag.push('• Contratos novos por mês: '  + r.contratos);
+    if(r.investimento) diag.push('• Investimento em tráfego: '  + r.investimento);
     if(diag.length){
       linhas.push('');
       linhas.push('📋 Meu diagnóstico:');
@@ -639,6 +709,12 @@ const CONFIG = {
         <p class="success-s" style="font-size:13px;margin-top:14px">Não abriu? Toque no botão acima.</p>
       </div>`;
       setTimeout(()=>{ location.href = wpp; }, CONFIG.whatsapp.redirectDelayMs||1800);
+    } else if(lead.killed){
+      host.innerHTML = `<div class="screen active">
+        <div class="success-ic">👋</div>
+        <div class="success-t">Valeu${firstName()?', '+firstName():''}!</div>
+        <p class="success-s">Guardamos seu contato. Quando fizer sentido, chama a 1Nort por aqui — a gente tá do outro lado esperando o momento certo.</p>
+      </div>`;
     } else {
       host.innerHTML = `<div class="screen active">
         <div class="success-ic">✓</div>
