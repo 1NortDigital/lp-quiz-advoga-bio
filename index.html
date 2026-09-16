@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<meta name="description" content="Diagnóstico gratuito do funil de aquisição do seu escritório trabalhista."/>
-<title>Diagnóstico 1Nort · Advocacia Trabalhista</title>
+<meta name="description" content="Diagnóstico gratuito do funil de aquisição de clientes do seu escritório de advocacia: trabalhista, previdenciário, bancário ou tributário."/>
+<title>Diagnóstico 1Nort · Advocacia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Playfair+Display:wght@700;900&family=Sora:wght@700;800&display=swap" rel="stylesheet"/>
@@ -208,10 +208,11 @@ const CONFIG = {
   valorTop: 100,
   currency: "BRL",
 
-  // QUALIFICAÇÃO: SEM kill switch — todo lead que preenche é enviado ao comercial.
-  // Faturamento/advogados/investimento pesam apenas pra classificar TOP vs padrão.
-  qualifyThreshold: 0,    // todo lead que chega ao final é qualificado (comercial filtra)
-  topThreshold:    7,     // lead TOP = alto score de estrutura + grana
+  // QUALIFICAÇÃO: kill switch só em área "Outra" e no reframe 🔴 (caem numa tela terminal, sem contato, sem rede).
+  // Faturamento/investimento/reframe pontuam (score do caminho). O contato é a ÚLTIMA tela — quem chega nela é qualificado.
+  // TOP não usa limiar numérico: fatura R$ 50 mil+ (pts.faturamento >= 2) E respondeu "ponto de partida ideal" ou
+  // "investir mais" (pts.investimento >= 2) sem passar pelo reframe — regra fica em computeScore().
+  qualifyThreshold: 0,    // todo lead que chega ao contato é qualificado (comercial filtra)
 
   // WHATSAPP — lead qualificado cai direto na conversa com mensagem pronta.
   // >>> TROCAR pelo número real do 1Nort Advoga (formato internacional, só dígitos) <<<
@@ -226,7 +227,7 @@ const CONFIG = {
   analisando: {
     enabled: true,
     ms: 1600,
-    msgs: ["Analisando seu escritório…","Cruzando com escritórios trabalhistas…","Quase pronto…"]
+    msgs: ["Analisando seu escritório…","Cruzando com escritórios da sua área…","Quase pronto…"]
   },
 
   // MODAL DE RETENÇÃO NO BACK
@@ -244,9 +245,9 @@ const CONFIG = {
     image:"hero-welcome.jpg",
     imageWebp:"hero-welcome.webp",
     title:"Conheça o Método capaz de trazer <em>Contatos com Viabilidade TODOS OS DIAS</em> para o seu WhatsApp!",
-    sub:"Método da 1Nort que já ajudou <b>+200 escritórios trabalhistas</b> a receberem leads qualificados no WhatsApp com <b>Geração de Demanda, IA de Atendimento e Processo Comercial Alinhado</b>.",
+    sub:"Método da 1Nort que já ajudou <b>+200 escritórios de advocacia</b> a receberem leads qualificados no WhatsApp com <b>Geração de Demanda, IA de Atendimento e Processo Comercial Alinhado</b>.",
     note:"",
-    proof:"<b>+200 escritórios trabalhistas</b> já escalaram com a 1Nort",
+    proof:"<b>+200 escritórios de advocacia</b> já escalaram com a 1Nort",
     cta:"Começar →"
   },
 
@@ -254,7 +255,7 @@ const CONFIG = {
   socialProof: {
     enabled: false,
     eyebrow: "Antes de enviar seu diagnóstico",
-    title: "{nome}, olha o resultado real de 3 advogados trabalhistas",
+    title: "Olha o resultado real de 3 escritórios que já usam a 1Nort",
     sub: "Antes de finalizar, conhece quem já tá colhendo resultado com a 1Nort.",
     cta: "Enviar diagnóstico →",
     items: [
@@ -271,48 +272,51 @@ const CONFIG = {
     ]
   },
 
+  /* FLUXO: Welcome → area_atuacao → faturamento → desafio → investimento → (orcamento_reframe só se "começar com menos") → contato → fim.
+     Kill switch (área "Outra" / reframe 🔴) leva pra tela terminal type:"end": sem contato, sem pixel, sem webhook, sem planilha. */
   steps: [
-    /* Tela 1 — contato essencial (versão bio Instagram: fluxo curto pra lead orgânico quente) */
-    { id:"contato", type:"contact", fireContato:true, savePartial:true, contactPicker:true, title:"Vamos começar 👋", sub:"Pra onde enviamos seu diagnóstico?",
-      fields:[
-        { key:"nome",     label:"Seu nome", type:"text", placeholder:"Dr. João Silva",       autocomplete:"name" },
-        { key:"telefone", label:"WhatsApp", type:"tel",  placeholder:"(11) 99999-9999",      autocomplete:"tel", prefix:"+55"  }
-      ], trust:true, next:"desafio" },
+    /* 1 — Área de atuação. "Outra" = kill switch → tela terminal nurture_area */
+    { id:"area_atuacao", type:"single", title:"Qual é a principal área de atuação do escritório?",
+      options:[
+        {ic:"⚖️", t:"Trabalhista",    s:0, next:"faturamento"},
+        {ic:"🧓", t:"Previdenciário", s:0, next:"faturamento"},
+        {ic:"🏦", t:"Bancário",       s:0, next:"faturamento"},
+        {ic:"🧾", t:"Tributário",     s:0, next:"faturamento"},
+        {ic:"📂", t:"Outra",          s:0, next:"nurture_area", kill:true}
+      ] },
 
-    /* Engajamento antes das perguntas de qualificação (afinidade + insumo pro comercial) */
-    { id:"desafio", type:"single", image:"imagens/desafio.jpg", title:"Qual o maior desafio do escritório hoje, {nome}?",
+    /* 2 — Faturamento. SÓ PONTUA, ninguém é desqualificado aqui */
+    { id:"faturamento", type:"single", title:"Qual foi o faturamento médio mensal do escritório nos últimos 3 meses?",
+      sub:"Uma média aproximada já serve, é só pra calibrar o diagnóstico.",
       options:[
-        {ic:"📭",t:"Faltam clientes novos",              s:0, next:"advogados"},
-        {ic:"🎯",t:"Tenho leads, mas não convertem",     s:0, next:"advogados"},
-        {ic:"⏰",t:"Não tenho tempo pra atender",         s:0, next:"advogados"},
-        {ic:"📈",t:"Já tenho clientes, quero escalar",    s:0, next:"advogados"}
+        {ic:"🌱", t:"Até R$ 20 mil",             s:0, next:"desafio"},
+        {ic:"📊", t:"De R$ 20 mil a R$ 50 mil",  s:1, next:"desafio"},
+        {ic:"📈", t:"De R$ 50 mil a R$ 100 mil", s:2, next:"desafio"},
+        {ic:"🏛️", t:"Acima de R$ 100 mil",      s:3, next:"desafio"}
       ] },
-    { id:"advogados", type:"single", title:"Quantos advogados atuam no escritório? (incluindo sócios)",
+
+    /* 3 — Desafio: engajamento + insumo pro comercial. Não pontua, não desqualifica */
+    { id:"desafio", type:"single", image:"imagens/desafio.jpg", title:"Qual é o maior desafio do escritório hoje?",
       options:[
-        {ic:"🧑‍⚖️",t:"Sou só eu / autônomo",     s:0, next:"contratos"},
-        {ic:"👥",t:"2 advogados",              s:0, next:"contratos"},
-        {ic:"⚖️",t:"3 a 5 advogados",           s:2, next:"contratos"},
-        {ic:"🏛️",t:"6 ou mais advogados",       s:3, next:"contratos"}
+        {ic:"📭",t:"Faltam clientes novos",           s:0, next:"investimento"},
+        {ic:"🎯",t:"Tenho leads, mas não convertem",  s:0, next:"investimento"},
+        {ic:"⏰",t:"Não tenho tempo pra atender",      s:0, next:"investimento"},
+        {ic:"📈",t:"Já tenho clientes, quero escalar", s:0, next:"investimento"}
       ] },
-    { id:"contratos", type:"single", image:"imagens/contratos.jpg", title:"Quantos contratos novos o escritório fecha por mês, em média?",
-      options:[
-        {ic:"🔧",t:"1 ou menos",     s:0, next:"investimento"},
-        {ic:"⚡",t:"2 a 5",           s:1, next:"investimento"},
-        {ic:"📈",t:"6 a 15",          s:2, next:"investimento"},
-        {ic:"🚀",t:"Mais de 15",      s:3, next:"investimento"}
-      ] },
-    /* PERGUNTA DE INVESTIMENTO — bifurca: quem quer menos vai pro reframe, resto submete direto */
+
+    /* 4 — Investimento: bifurca — quem quer menos vai pro reframe, o resto segue pro contato */
     { id:"investimento", type:"single", image:"imagens/time.jpg",
       title:"Nossos clientes fecham <b>5 a 15 novos contratos por mês</b> investindo cerca de <b>R$ 40/dia</b> em anúncios (~R$ 1.200/mês).",
       sub:"Esse é um ponto de partida que combina com seu escritório?",
       options:[
-        {ic:"🌱",t:"Quero começar com menos",             s:1, next:"orcamento_reframe"},
-        {ic:"✅",t:"É um ponto de partida ideal",         s:2, submit:true},
-        {ic:"🚀",t:"Quero começar investindo mais!",      s:3, submit:true}
+        {ic:"🌱",t:"Quero começar com menos",        s:1, next:"orcamento_reframe"},
+        {ic:"✅",t:"É um ponto de partida ideal",    s:2, next:"contato"},
+        {ic:"🚀",t:"Quero começar investindo mais!", s:3, next:"contato"}
       ] },
-    /* TELA DE REFRAME — prova visual (card WhatsApp) + pergunta corte de budget */
+
+    /* 5 — Reframe: prova visual (card WhatsApp) + pergunta de corte pelo valor TOTAL (mídia + equipe). 🔴 = kill switch */
     { id:"orcamento_reframe", type:"reframe",
-      title:"{nome}, é ISSO que a gente entrega no seu WhatsApp 👇",
+      title:"É ISSO que a gente entrega no seu WhatsApp 👇",
       wppCard:{
         avatar:"PA",
         name:"Paulo Alvin",
@@ -320,20 +324,29 @@ const CONFIG = {
         msg:"Olá Dra. Melissa! Respondi o questionário do site e gostaria de atendimento.\n\n<b>Situação:</b> Demitido(a) recentemente ou vai sair em breve\n<b>Contrato:</b> CLT\n<b>Tempo na empresa:</b> 1 a 3 anos\n<b>Tempo desde saída:</b> Menos de 30 dias\n<b>O que aconteceu:</b> Insalubridade, Assédio moral ou sexual\n<b>Faixa salarial:</b> R$ 1.500 a R$ 3.000\n\n<b>Produto:</b> trabalhista\n<b>Tese:</b> insalubridade, assedio_moral\n<b>Origem:</b> meta"
       },
       lead:"Cada lead chega no seu WhatsApp já pré-qualificado. Sem \"quanto custa?\", sem curioso, sem pergunta solta.",
-      price:"Pra receber lead assim todo dia, o investimento em mídia começa em <b>R$ 1.200/mês</b>. Menos que isso a matemática não fecha.",
-      sub:"Com essa perspectiva, quanto faz sentido investir por mês na mídia?",
+      price:"Pra receber lead assim todo dia, o investimento total (mídia + equipe da 1Nort) fica em média entre <b>R$ 2.500 e R$ 3.000/mês</b>. Menos que isso a matemática não fecha.",
+      sub:"Com essa perspectiva, quanto faz sentido investir por mês no total?",
       options:[
-        {ic:"🟢",t:"Consigo os R$ 1.200/mês",       s:2, submit:true},
-        {ic:"🟡",t:"Entre R$ 800 e R$ 1.200",       s:1, submit:true},
-        {ic:"🔴",t:"Menos que R$ 800 hoje",         s:0, next:"nurture", kill:true}
+        {ic:"🟢",t:"Consigo os R$ 2.500 a 3.000/mês", s:2, next:"contato"},
+        {ic:"🟡",t:"Entre R$ 2.000 e R$ 2.500",       s:1, next:"contato"},
+        {ic:"🔴",t:"Menos que R$ 2.000 hoje",         s:0, next:"nurture", kill:true}
       ] },
-    /* NURTURE — descarte suave: sem WhatsApp, sem promessa de contato do comercial */
-    { id:"nurture", type:"single", submit:true,
-      title:"Valeu pela honestidade, {nome} 🙌",
-      sub:"Com menos de R$ 800/mês em mídia, a parceria com a 1Nort ainda não vai performar — o algoritmo não tem volume pra aprender e a gente prefere te falar isso antes de vender.<br><br>Quando o momento chegar, chama a gente por aqui mesmo.",
-      options:[
-        {ic:"👍",t:"Entendi, obrigado!", s:0, kill:true}
-      ] }
+
+    /* 6 — Contato: ÚLTIMA tela, submete. Sem savePartial (o envio completo vem logo em seguida). Versão bio Instagram: lead orgânico quente */
+    { id:"contato", type:"contact", submit:true, fireContato:true, contactPicker:true,
+      title:"Último passo 👋", sub:"Pra onde enviamos seu diagnóstico?",
+      fields:[
+        { key:"nome",     label:"Seu nome", type:"text", placeholder:"Dr. João Silva",  autocomplete:"name" },
+        { key:"telefone", label:"WhatsApp", type:"tel",  placeholder:"(11) 99999-9999", autocomplete:"tel", prefix:"+55" }
+      ], trust:true },
+
+    /* Telas terminais de desqualificação — sem opções, sem rede, sem eventos, sem {nome} */
+    { id:"nurture_area", type:"end", terminal:true,
+      title:"Obrigado pelo interesse 🙏",
+      sub:"Hoje a 1Nort atende escritórios das áreas trabalhista, previdenciária, bancária e tributária, e a gente prefere ser transparente a prometer resultado numa área que ainda não dominamos.<br><br>Se o escritório também atuar em uma dessas áreas, volta aqui e refaz o diagnóstico." },
+    { id:"nurture", type:"end", terminal:true,
+      title:"Valeu pela honestidade 🙌",
+      sub:"Com menos de R$ 2.000/mês no total, a parceria com a 1Nort ainda não vai performar — o algoritmo não tem volume pra aprender e a gente prefere te falar isso antes de vender.<br><br>Quando o momento chegar, volta aqui e refaz o diagnóstico." }
   ]
 };
 
@@ -458,7 +471,7 @@ const CONFIG = {
     currentId=null; const w=CONFIG.welcome;
     host.innerHTML = `<div class="screen active">
       ${w.image?`<picture>${w.imageWebp?`<source srcset="${w.imageWebp}" type="image/webp">`:''}<img class="w-hero" src="${w.image}" alt="Equipe da 1Nort" width="700" height="466" loading="eager" decoding="async" fetchpriority="high"></picture>`:''}
-      <div class="greet">${saudacao()}, advogado trabalhista.</div>
+      <div class="greet">${saudacao()}, advogado(a).</div>
       <h1 class="w-title">${w.title}</h1>
       <p class="w-sub">${w.sub}</p>${w.note?`<p class="w-note">${w.note}</p>`:''}
       <button class="btn" id="startBtn">${w.cta}</button>
@@ -480,7 +493,7 @@ const CONFIG = {
           return `<div class="field"><label class="label" for="f_${f.key}">${f.label}</label>${campo}<div class="err-msg"></div></div>`;
         }).join('')}</form>
         ${step.trust?`<div class="trust"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v5c0 5-3.5 9-8 11-4.5-2-8-6-8-11V6l8-4z" stroke="rgba(255,255,255,.4)" stroke-width="2" stroke-linejoin="round"/></svg> Seus dados estão seguros · sem spam</div>`:''}
-        <button class="btn" id="okBtn">Continuar →</button>
+        <button class="btn" id="okBtn">${step.submit?'Quero meu diagnóstico →':'Continuar →'}</button>
         <button class="back" id="backBtn">← Voltar</button></div>`;
       updateProgress();
       host.querySelectorAll('.input').forEach(el=>{ const k=el.dataset.key; if(lead[k]) el.value=lead[k]; }); // pré-preenche (volta/contatos)
@@ -510,7 +523,7 @@ const CONFIG = {
         <div class="q-title">${px(step.title)}</div>${subEarly}
         ${wppHtml}${leadHtml}${priceHtml}${subLate}
         <div class="opts">${step.options.map((o,i)=>`<button class="opt" data-i="${i}">${o.ic?`<span class="opt-ic">${o.ic}</span>`:''}<span>${o.t}</span><span class="opt-dot"></span></button>`).join('')}</div>
-        ${stepHistory.length?'<button class="back" id="backBtn">← Voltar</button>':''}</div>`;
+        <button class="back" id="backBtn">← Voltar</button></div>`;   // na 1ª tela, goBack() cai no welcome
       updateProgress();
       host.querySelectorAll('.opt').forEach(btn=>{
         btn.onclick = ()=>{
@@ -518,7 +531,7 @@ const CONFIG = {
           const opt=step.options[+btn.dataset.i];
           lead.respostas[step.id]=opt.t;
           lead.pts[step.id]=opt.s||0;
-          lead.kills[step.id]=opt.kill===true;   // corte (faturamento até 20k / investimento <1.200)
+          lead.kills[step.id]=opt.kill===true;   // kill switch (área "Outra" / reframe 🔴) → opt.next é uma tela terminal type:"end"
           const isSubmit = step.submit || opt.submit===true;
           setTimeout(()=>{
             if(isSubmit){ maybeShowSocialProof(); }                     // passo final → prova social (qualificado) ou finish
@@ -527,6 +540,18 @@ const CONFIG = {
         };
       });
       const b=document.getElementById('backBtn'); if(b) b.onclick=goBack;
+    }
+    else if(step.type==='end'){
+      // Tela TERMINAL de desqualificação (destino de kill:true): só título + sub.
+      // Sem opções, sem "Voltar", sem pixel, sem webhook, sem planilha — e NUNCA chama finish().
+      computeScore();        // só atualiza lead.killed/qualified em memória (sem efeito de rede)
+      disarmRetention();
+      host.innerHTML = `<div class="screen active">
+        <div class="success-ic">👋</div>
+        <div class="success-t">${px(step.title)}</div>
+        ${step.sub?`<p class="success-s">${px(step.sub)}</p>`:''}
+      </div>`;
+      setProg(100);
     }
     else if(step.type==='text'){
       computeScore();   // avalia qualificação (score + kill) antes de decidir o botão de WhatsApp
@@ -571,15 +596,20 @@ const CONFIG = {
     if(!ok) return;
     inputs.forEach(f=>{ lead[f.dataset.key]=f.value.trim(); });
     setAdvancedMatching();
-    if(step.fireContato) fireEvent(CONFIG.eventoContato);
-    if(step.savePartial) sendWebhook(true);   // #3 — salva nome+telefone na hora
+    if(step.fireContato) fireEvent(CONFIG.eventoContato);   // EndForm — antes do RespondiConversion (disparado em finish)
+    if(step.submit){ maybeShowSocialProof(); return; }       // contato é a ÚLTIMA tela → prova social (se ligada) ou finish(): sem envio parcial
+    if(step.savePartial) sendWebhook(true);   // #3 — salva nome+telefone na hora (só se o contato NÃO for a última tela)
     stepHistory.push(currentId); render(step.next);
   }
 
-  function goBack(){ const prev=stepHistory.pop(); if(prev) render(prev); else renderWelcome(); }
+  function goBack(){
+    // limpa a resposta do step que está sendo deixado: se o lead mudar de caminho, nada stale (ex.: orcamento_reframe) vaza pro WhatsApp nem pro payload
+    if(currentId){ delete lead.respostas[currentId]; delete lead.pts[currentId]; delete lead.kills[currentId]; }
+    const prev=stepHistory.pop(); if(prev) render(prev); else renderWelcome();
+  }
 
   function updateProgress(){
-    const total = CONFIG.steps.length;   // quiz linear (sem ramificação)
+    const total = CONFIG.steps.filter(s=>s.type!=='end').length;   // só as telas do caminho principal (terminais não contam)
     setProg(Math.min(96, Math.round((stepHistory.length+1)/total*100)));
   }
 
@@ -587,11 +617,13 @@ const CONFIG = {
   function computeScore(){
     const path = stepHistory.concat(currentId);
     let s=0, killed=false;
-    path.forEach(id=>{ s += (lead.pts[id]||0); if(lead.kills[id]) killed=true; });
+    path.forEach(id=>{ s += (lead.pts[id]||0); if(lead.kills[id]) killed=true; });   // faturamento 0-3 + investimento 1-3 + reframe 0-2
     lead.score    = s;
     lead.killed   = killed;
     lead.qualified= !killed && s >= CONFIG.qualifyThreshold;   // kill switch derruba mesmo com score alto
-    lead.top      = lead.qualified && s >= CONFIG.topThreshold;
+    // TOP = fatura R$ 50 mil+ E "ponto de partida ideal"/"investir mais" no investimento. Quem passa pelo reframe nunca é TOP.
+    const viaReframe = path.indexOf('orcamento_reframe') > -1;
+    lead.top      = lead.qualified && (lead.pts.faturamento||0) >= 2 && (lead.pts.investimento||0) >= 2 && !viaReframe;
     return s;
   }
 
@@ -622,9 +654,12 @@ const CONFIG = {
     try{ fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:true}); }catch(e){}
   }
   function sendWebhook(parcial){
+    const r = lead.respostas || {};
     const payload = Object.assign({
       pagina:CONFIG.pagina, origem_label:CONFIG.origemLabel||'', event_id:eventId, ref:refCode,
       nome:lead.nome||'', telefone:lead.telefone||'', email:lead.email||'', cidade:lead.cidade||'',
+      // respostas principais também no topo (colunas da planilha / CRM) — o objeto completo segue em `respostas`
+      area_atuacao:r.area_atuacao||'', faturamento:r.faturamento||'', desafio:r.desafio||'', investimento:r.investimento||'',
       papel:lead.papel, qualificado:lead.qualified===true,
       score:lead.score, top_tier:lead.top===true,
       tier: parcial ? 'parcial' : (lead.qualified===true ? (lead.top?'top':'qualificado') : 'desqualificado'),
@@ -668,10 +703,11 @@ const CONFIG = {
     const r = lead.respostas || {};
     const linhas = [ px(CONFIG.whatsapp.msg||'') ];
     const diag = [];
-    if(r.desafio)      diag.push('• Maior desafio: '            + r.desafio);
-    if(r.advogados)    diag.push('• Advogados no escritório: '  + r.advogados);
-    if(r.contratos)    diag.push('• Contratos novos por mês: '  + r.contratos);
-    if(r.investimento) diag.push('• Investimento em tráfego: '  + r.investimento);
+    if(r.area_atuacao)      diag.push('• Área de atuação: ' + r.area_atuacao);
+    if(r.faturamento)       diag.push('• Faturamento médio: ' + r.faturamento);
+    if(r.desafio)           diag.push('• Maior desafio: ' + r.desafio);
+    if(r.investimento)      diag.push('• Investimento em tráfego: ' + r.investimento);
+    if(r.orcamento_reframe) diag.push('• Investimento total: ' + r.orcamento_reframe);
     if(diag.length){
       linhas.push('');
       linhas.push('📋 Meu diagnóstico:');
@@ -710,10 +746,11 @@ const CONFIG = {
       </div>`;
       setTimeout(()=>{ location.href = wpp; }, CONFIG.whatsapp.redirectDelayMs||1800);
     } else if(lead.killed){
+      // Fallback: no fluxo atual o kill vai pra tela type:"end" e nunca chega aqui (finish() não é chamado). Sem promessa de contato guardado.
       host.innerHTML = `<div class="screen active">
         <div class="success-ic">👋</div>
         <div class="success-t">Valeu${firstName()?', '+firstName():''}!</div>
-        <p class="success-s">Guardamos seu contato. Quando fizer sentido, chama a 1Nort por aqui — a gente tá do outro lado esperando o momento certo.</p>
+        <p class="success-s">Quando o momento chegar, volta aqui e refaz o diagnóstico — a gente tá do outro lado esperando a hora certa.</p>
       </div>`;
     } else {
       host.innerHTML = `<div class="screen active">

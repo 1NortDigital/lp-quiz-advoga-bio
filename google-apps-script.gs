@@ -34,6 +34,10 @@ var SCHEMAS = {
   },
   advoga: {
     aba: 'Advoga',
+    // 2026-09-15 — quiz reestruturado: area_atuacao > faturamento > desafio > investimento > [reframe] > contato.
+    // 'advogados' e 'contratos' SAIRAM do quiz mas FICAM aqui (chegam vazias daqui pra frente) pra nao
+    // desalinhar as linhas antigas da aba. Coluna nova entra SEMPRE no FIM (depois de 'ref'):
+    // 'area_atuacao' vem no topo do payload (e tambem em respostas{}), valueFor_ resolve nos dois.
     colunas: [
       'data_hora','tier','qualificado','top_tier','score',
       'nome','telefone','email','cidade',
@@ -41,7 +45,8 @@ var SCHEMAS = {
       'pagina','utm_source','utm_medium','utm_campaign','utm_content',
       'fbc','fbp','origem','event_id','parcial',
       'desafio','contratos',
-      'respostas_json','ref'
+      'respostas_json','ref',
+      'area_atuacao'
     ],
     titulos: [
       'Data/Hora','Tier','Qualificado','Top Tier','Score',
@@ -50,7 +55,8 @@ var SCHEMAS = {
       'Pagina','UTM Source','UTM Medium','UTM Campaign','UTM Content',
       'FBC','FBP','Origem','Event ID','Parcial',
       'Desafio','Contratos',
-      'Respostas (JSON)','Ref'
+      'Respostas (JSON)','Ref',
+      'Area de Atuacao'
     ]
   },
   food: {
@@ -161,7 +167,15 @@ function doGet(e) {
   return resposta_({ ok: true, msg: 'LP-Quiz endpoint no ar (Solar + Advoga + Moveis + Food)' });
 }
 
+// Garante a linha 1 com os titulos do schema. Compara CELULA A CELULA: quando o schema ganha
+// coluna nova no fim (ex.: 'Area de Atuacao'), so a celula nova esta diferente (vazia) e a linha
+// inteira e reescrita com os titulos certos — sem mexer nas linhas de dados.
+// Se a aba tiver menos colunas FISICAS que o schema (appendRow so expande ate onde gravou),
+// getRange() estoura com "out of bounds" — por isso insere as colunas que faltam antes de ler/escrever.
+// Isso tambem cobre o setValues() do UPSERT em doPost, que usa a mesma largura.
 function garantirCabecalho_(sheet, titulos) {
+  var faltam = titulos.length - sheet.getMaxColumns();
+  if (faltam > 0) sheet.insertColumnsAfter(sheet.getMaxColumns(), faltam);
   var faixa = sheet.getRange(1, 1, 1, titulos.length);
   var atual = faixa.getValues()[0];
   var precisa = false;
